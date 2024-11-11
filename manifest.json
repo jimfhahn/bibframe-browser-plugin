@@ -1,0 +1,36 @@
+{
+  "manifest_version": 2,
+  "name": "BIBFRAMinator",
+  "version": "1.0",
+  "description": "BIBFRAMinates the web",
+  "permissions": [
+    "activeTab",
+    "http://localhost:5001/mmsid/*",
+    "http://localhost:8080/entity/*"
+  ],
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://find.library.upenn.edu/catalog/*",
+        "https://find.library.upenn.edu/?search_field*"
+      ],
+      "js": ["content.js"]
+    }
+  ]
+}
