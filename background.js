@@ -1,6 +1,6 @@
 // background.js
 function fetchDataAndRewriteHTML(tabId, id) {
-  const apiUrl = `http://localhost:5001/mmsid/${id}`;
+  const apiUrl = `https://id.bibframe.app/app/mmsid/${id}`;
   console.log('Fetching data from API:', apiUrl);
   fetch(apiUrl)
     .then(response => {

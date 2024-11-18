@@ -2,11 +2,11 @@
   "manifest_version": 2,
   "name": "BIBFRAMinator",
   "version": "1.0",
-  "description": "BIBFRAMinates the web",
+  "description": "BIBFRAMinate the web",
   "permissions": [
     "activeTab",
-    "http://localhost:5001/mmsid/*",
-    "http://localhost:8080/entity/*"
+    "https://id.bibframe.app/mmsid/*",
+    "https://id.bibframe.app/entity/*"
   ],
   "browser_action": {
     "default_popup": "popup.html",
@@ -32,5 +32,6 @@
       ],
       "js": ["content.js"]
     }
-  ]
+  ],
+  "content_security_policy": "script-src 'self'; object-src 'self'"
 }
