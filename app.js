@@ -30,9 +30,9 @@ new Vue({
         button.className = 'btn btn-secondary mt-3 mb-3';
         button.setAttribute('data-bs-toggle', 'modal');
         button.setAttribute('data-bs-target', '#knowledgeCardModal');
-        button.title = `Author Knowledge Card:`;
+        button.title = `Author/Creator Knowledge Card: works, biographical information, and more`;
         button.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${this.apiData.qid}`);
-        button.textContent = `Author Knowledge Card`;
+        button.textContent = `Author/Creator Knowledge Card`;
 
         const targetLink = document.querySelector('a.btn.btn-success[data-controller="request-button"]');
         if (targetLink) {
