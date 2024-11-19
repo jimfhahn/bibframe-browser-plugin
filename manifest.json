@@ -4,9 +4,13 @@
   "version": "1.0",
   "description": "BIBFRAMinates the web",
   "permissions": [
+    "webNavigation",
     "activeTab",
     "https://id.bibframe.app/*"
   ],
+  "background": {
+    "scripts": ["background.js"]
+  },
   "browser_action": {
     "default_icon": {
       "16": "icons/icon-16.png",
@@ -25,8 +29,17 @@
         "https://find.library.upenn.edu/catalog/*",
         "https://find.library.upenn.edu/?search_field*"
       ],
-      "js": ["content.js"]
+      "js": [
+        "lib/jquery.min.js",
+        "lib/popper.min.js",
+        "lib/bootstrap.min.js",
+        "lib/vue.min.js",
+        "content.js"
+      ],
+      "css": [
+        "lib/bootstrap.min.css"
+      ]
     }
   ],
-  "content_security_policy": "script-src 'self' https://cdn.jsdelivr.net; object-src 'self'"
+  "content_security_policy": "script-src 'self'; object-src 'self'"
 }
