@@ -6,7 +6,8 @@
   "permissions": [
     "webNavigation",
     "activeTab",
-    "https://id.bibframe.app/*"
+    "https://id.bibframe.app/*",
+    "https://find.library.upenn.edu/*"
   ],
   "background": {
     "scripts": ["background.js"]
@@ -26,8 +27,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://find.library.upenn.edu/catalog/*",
-        "https://find.library.upenn.edu/?search_field*"
+        "https://find.library.upenn.edu/catalog/*"
       ],
       "js": [
         "lib/jquery.min.js",
