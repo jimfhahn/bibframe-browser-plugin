@@ -102,26 +102,28 @@
               return;
             }
       
+            // Create the button
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'btn btn-secondary'; // Removed mt-3 mb-3 classes
+            button.className = 'btn btn-secondary';
             button.setAttribute('data-toggle', 'modal');
             button.setAttribute('data-target', '#knowledgeCardModal');
-            button.title = `Author/Creator Knowledge Card: works, biographical information, and more`;
+            button.title = 'Author/Creator Knowledge Card: works, biographical information, and more';
             button.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${this.apiData.qid}`);
-            button.textContent = `Author/Creator Knowledge Card`;
+            button.textContent = 'Author/Creator Knowledge Card';
       
-            // Find the existing button and insert the new button below it
-            const existingButtonElement = document.querySelector('.btn.btn-success'); // Target the existing button with class 'btn btn-success'
-            if (existingButtonElement) {
-              console.log('Existing button element found:', existingButtonElement);
-              const buttonContainer = document.createElement('div');
-              buttonContainer.className = 'mt-2'; // Add some margin-top for spacing
-              buttonContainer.appendChild(button);
-              existingButtonElement.insertAdjacentElement('afterend', buttonContainer); // Changed from buttonContainer
-              console.log('Button inserted below the existing button');
+            // Create a 'dd' element and append the button to it
+            const ddElement = document.createElement('dd');
+            ddElement.appendChild(button);
+      
+            // Find the target element and insert the 'dd' after it
+            const targetElement = document.querySelector('dt.blacklight-creator_show');
+            if (targetElement) {
+              console.log('Target element found:', targetElement);
+              targetElement.insertAdjacentElement('afterend', ddElement);
+              console.log('Button inserted under the Author/Creator line');
             } else {
-              console.error('Existing button element not found during insertion');
+              console.error('Target element not found');
             }
       
             // Add event listener to the button to set the iframe URL
