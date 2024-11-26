@@ -110,6 +110,8 @@ function extractMmsidFromUrl() {
         if (modal && iframe) {
           console.log('Modal and iframe elements found');
 
+          // Remove custom event listeners to let Bootstrap handle them naturally
+          /*
           modal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget;
             if (!button) {
@@ -127,6 +129,12 @@ function extractMmsidFromUrl() {
             console.log('Modal hidden, clearing iframe src');
             iframe.setAttribute('src', '');
           });
+
+          // Remove custom jQuery handler for closing the modal
+          $(document).on('click', '[data-bs-dismiss="modal"]', function() {
+            $('#knowledgeCardModal').modal('hide');
+          });
+          */
         } else {
           console.error('Modal or iframe element not found');
         }

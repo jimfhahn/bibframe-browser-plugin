@@ -23,6 +23,9 @@
         console.log('Fetched data:', data);
         if (data) {
           fetchThumbnail(data);
+          if (window.location.href.includes('/catalog/')) {
+            insertButton(data);
+          }
         }
       })
       .catch(error => console.error('Fetch Error:', error));
@@ -79,10 +82,27 @@
         img.remove(); // Remove the image element if it fails to load
       };
 
+      // Create the anchor element
+      const anchor = document.createElement('a');
+      anchor.href = '#';
+      anchor.setAttribute('data-toggle', 'modal');
+      anchor.setAttribute('data-target', '#knowledgeCardModal');
+      anchor.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${data.qid}`);
+      anchor.appendChild(img);
+
+      // Add click event listener to the anchor
+      anchor.addEventListener('click', function(event) {
+        event.preventDefault();
+        const iframe = document.getElementById('knowledgeCardIframe');
+        const url = anchor.getAttribute('data-preview-url');
+        console.log('Thumbnail clicked, loading URL:', url);
+        iframe.setAttribute('src', url + '?t=' + new Date().getTime());
+      });
+
       // Create the border div
       const borderDiv = document.createElement('div');
       borderDiv.className = 'border border-primary p-2';
-      borderDiv.appendChild(img);
+      borderDiv.appendChild(anchor);
 
       // Create the thumbnail div
       const thumbnailDiv = document.createElement('div');
@@ -117,8 +137,8 @@
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'btn btn-secondary mt-3 mb-3';
-      button.setAttribute('data-bs-toggle', 'modal');
-      button.setAttribute('data-bs-target', '#knowledgeCardModal');
+      button.setAttribute('data-toggle', 'modal');
+      button.setAttribute('data-target', '#knowledgeCardModal');
       button.title = `Author/Creator Knowledge Card: works, biographical information, and more`;
       button.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${data.qid}`);
       button.textContent = `Author/Creator Knowledge Card`;
@@ -129,6 +149,7 @@
         console.log('Button inserted');
       } else {
         console.error('Target element not found');
+        return; // Exit if the target element is not found
       }
 
       // Add event listener to the button to set the iframe URL
@@ -176,43 +197,57 @@
 
   // Function to initialize modal events
   function initializeModalEvents() {
-    const modal = document.getElementById('knowledgeCardModal');
+    const modal = $('#knowledgeCardModal');
     const iframe = document.getElementById('knowledgeCardIframe');
 
     if (modal && iframe) {
       console.log('Modal and iframe elements found');
 
-      modal.addEventListener('show.bs.modal', function (event) {
-        const button = event.relatedTarget;
-        if (!button) {
-          console.error('Button that triggered the modal not found');
-          return;
-        }
-        console.log('Button that triggered the modal:', button);
-        const url = button.getAttribute('data-preview-url');
+      modal.on('show.bs.modal', function(event) {
+        const button = $(event.relatedTarget); // Button that triggered the modal
+        const url = button.data('preview-url');
         console.log('Modal shown, loading URL:', url);
-        iframe.setAttribute('src', '');
-        iframe.setAttribute('src', url + '?t=' + new Date().getTime());
+        iframe.src = url + '?t=' + new Date().getTime();
       });
 
-      modal.addEventListener('hidden.bs.modal', function () {
+      modal.on('hidden.bs.modal', function() {
         console.log('Modal hidden, clearing iframe src');
-        iframe.setAttribute('src', '');
+        iframe.src = '';
+      });
+
+      // Ensure the modal can be closed using jQuery
+      $(document).on('click', '[data-dismiss="modal"]', function() {
+        $('#knowledgeCardModal').modal('hide');
       });
     } else {
       console.error('Modal or iframe element not found');
     }
   }
 
-  // Function to initialize the app
-  function initializeApp() {
+  // Function to initialize the app for the catalog detail page
+  function initializeCatalogPage() {
+    console.log('Initializing app for catalog detail page...');
+
+    // Extract the MMSID from the URL
+    const mmsid = extractMmsidFromUrl();
+    if (mmsid) {
+      console.log('Extracted mmsid from URL:', mmsid);
+      fetchData(mmsid);
+    } else {
+      console.log('Failed to extract mmsid from URL');
+    }
+  }
+
+  // Function to extract the MMSID from the URL
+  function extractMmsidFromUrl() {
+    const url = window.location.href;
+    const match = url.match(/catalog\/(\d+)/);
+    return match ? match[1] : null;
+  }
+
+  // Function to initialize the app for the search results page
+  function initializeSearchResultsPage() {
     console.log('Initializing app for search results page...');
-
-    // Inject the modal HTML if not already injected
-    injectModalHTML();
-
-    // Initialize the modal events
-    initializeModalEvents();
 
     // Wait for the documents list to be present
     const observer = new MutationObserver(() => {
@@ -228,6 +263,24 @@
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  // Function to initialize the app
+  function initializeApp() {
+    console.log('Initializing app...');
+
+    // Inject the modal HTML if not already injected
+    injectModalHTML();
+
+    // Initialize the modal events
+    initializeModalEvents();
+
+    // Determine the page type and initialize accordingly
+    if (window.location.href.includes('/catalog/')) {
+      initializeCatalogPage();
+    } else if (document.getElementById('documents')) {
+      initializeSearchResultsPage();
+    }
   }
 
   // Initialize the app when the content script runs

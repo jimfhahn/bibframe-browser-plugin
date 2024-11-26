@@ -1,7 +1,20 @@
 // background.js
 
+// Remove the injectCSS function entirely
+/*
+function injectCSS(tabId) {
+  return browser.tabs.insertCSS(tabId, {
+    file: 'lib/bootstrap.min.css'
+  }).catch(error => {
+    console.error('Error injecting CSS:', error);
+  });
+}
+*/
+
+// Modify the injectScripts function to no longer inject CSS
 function injectScripts(tabId, scripts) {
   if (scripts.length === 0) {
+    // Remove the injectCSS call
     return Promise.resolve();
   }
   const script = scripts.shift();
