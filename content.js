@@ -136,7 +136,8 @@
 
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'btn btn-secondary mt-3 mb-3';
+      button.className = 'btn btn-secondary mt-3 mb-3'; // Ensure Bootstrap button classes are used
+      button.style.width = 'auto'; // Ensure the button does not span full width
       button.setAttribute('data-toggle', 'modal');
       button.setAttribute('data-target', '#knowledgeCardModal');
       button.title = `Author/Creator Knowledge Card: works, biographical information, and more`;
