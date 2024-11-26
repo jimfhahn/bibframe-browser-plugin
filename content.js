@@ -1,167 +1,146 @@
 (function() {
   console.log('Content script loaded');
 
-  // Global variable to hold the Vue instance
-  let vueApp = null;
-
-  // Function to extract the mmsid from the URL
-  function extractMmsidFromUrl() {
-    const url = window.location.href;
-    const match = url.match(/catalog\/(\d+)/);
-    return match ? match[1] : null;
+  // Function to extract MMSIDs from the document HTML
+  function extractMmsidsFromDocument() {
+    const mmsidElements = document.querySelectorAll('[data-document-id]');
+    console.log('Extracting MMSIDs from document:', mmsidElements);
+    return Array.from(mmsidElements).map(el => el.getAttribute('data-document-id'));
   }
 
-  // Function to initialize the app
-  function initializeApp() {
-    console.log('Initializing app...');
-
-    // Remove existing app div and Vue instance if any
-    if (vueApp) {
-      vueApp.$destroy();
-      vueApp = null;
-    }
-    const existingAppDiv = document.getElementById('bibframinator-app');
-    if (existingAppDiv) {
-      existingAppDiv.remove();
-    }
-
-    // Create a unique div for the app
-    const appDiv = document.createElement('div');
-    appDiv.id = 'bibframinator-app';
-    document.body.appendChild(appDiv);
-
-    // Inject the modal HTML if not already injected
-    if (!document.getElementById('knowledgeCardModal')) {
-      injectModalHTML();
-    } else {
-      console.log('Modal HTML already injected');
-    }
-
-    // Initialize the Vue app
-    vueApp = new Vue({
-      el: '#bibframinator-app',
-      data: {
-        apiData: null,
-        mmsid: null,
-      },
-      methods: {
-        fetchData() {
-          const apiUrl = `https://id.bibframe.app/app/mmsid/${this.mmsid}`;
-          console.log('Fetching data from API:', apiUrl);
-          fetch(apiUrl)
-            .then((response) => {
-              console.log('API response received:', response);
-              if (!response.ok) {
-                throw new Error('Network response was not ok');
-              }
-              return response.json();
-            })
-            .then((data) => {
-              console.log('Fetched data:', data);
-              this.apiData = data;
-              this.observeButtonInsertion(); // Observe DOM changes to insert button
-            })
-            .catch((error) => console.error('Error fetching data:', error));
-        },
-        observeButtonInsertion() {
-          const existingButtonElement = document.querySelector('.btn.btn-success');
-          if (existingButtonElement) {
-            console.log('Existing button element found:', existingButtonElement);
-            this.insertButton();
-          } else {
-            const observer = new MutationObserver((mutations) => {
-              for (const mutation of mutations) {
-                if (mutation.addedNodes.length) {
-                  const targetButton = document.querySelector('.btn.btn-success');
-                  if (targetButton) {
-                    console.log('Existing button element found:', targetButton);
-                    this.insertButton();
-                    observer.disconnect(); // Stop observing after button is inserted
-                    break;
-                  }
-                }
-              }
-            });
-
-            // Observe the entire body to catch button insertion
-            const targetNode = document.body;
-            observer.observe(targetNode, { childList: true, subtree: true });
-            console.log('MutationObserver is now observing for button insertion');
-          }
-        },
-        insertButton() {
-          console.log('Attempting to insert button');
-          if (this.apiData && this.apiData.qid && this.apiData.qid !== 'null') {
-            console.log('API data is valid, proceeding to insert button');
-            // Check if the button already exists
-            const existingButton = document.querySelector(
-              `button[data-preview-url="https://id.bibframe.app/entity/${this.apiData.qid}"]`
-            );
-            if (existingButton) {
-              console.log('Button already exists');
-              return;
-            }
-      
-            // Create the button
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'btn btn-secondary';
-            button.setAttribute('data-toggle', 'modal');
-            button.setAttribute('data-target', '#knowledgeCardModal');
-            button.title = 'Author/Creator Knowledge Card: works, biographical information, and more';
-            button.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${this.apiData.qid}`);
-            button.textContent = 'Author/Creator Knowledge Card';
-      
-            // Create a 'dd' element and append the button to it
-            const ddElement = document.createElement('dd');
-            ddElement.appendChild(button);
-      
-            // Find the target element and insert the 'dd' after it
-            const targetElement = document.querySelector('dt.blacklight-creator_show');
-            if (targetElement) {
-              console.log('Target element found:', targetElement);
-              targetElement.insertAdjacentElement('afterend', ddElement);
-              console.log('Button inserted under the Author/Creator line');
-            } else {
-              console.error('Target element not found');
-            }
-      
-            // Add event listener to the button to set the iframe URL
-            button.addEventListener('click', () => {
-              const iframe = document.getElementById('knowledgeCardIframe');
-              const url = button.getAttribute('data-preview-url');
-              console.log('Button clicked, loading URL:', url);
-              iframe.setAttribute('src', url + '?t=' + new Date().getTime());
-            });
-          } else {
-            console.log('qid is null or undefined, not displaying the button');
-          }
-        },
-      },
-      mounted() {
-        console.log('Vue app mounted');
-
-        const mmsid = extractMmsidFromUrl();
-        if (mmsid) {
-          console.log('Extracted mmsid from URL:', mmsid);
-          this.mmsid = mmsid;
-          this.fetchData();
-        } else {
-          console.log('Failed to extract mmsid from URL');
+  // Function to fetch data for a given MMSID
+  function fetchData(mmsid) {
+    const apiUrl = `https://id.bibframe.app/app/mmsid/${mmsid}`;
+    fetch(apiUrl)
+      .then(response => {
+        console.log('API response received:', response);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
         }
-      },
-      watch: {
-        apiData(newData) {
-          if (newData) {
-            console.log('apiData updated, inserting button');
-            this.insertButton();
-          }
-        },
-      },
-    });
+        return response.json();
+      })
+      .then(data => {
+        console.log('Fetched data:', data);
+        if (data) {
+          fetchThumbnail(data);
+        }
+      })
+      .catch(error => console.error('Fetch Error:', error));
+  }
 
-    // Initialize the modal events
-    initializeModalEvents();
+  // Function to fetch the thumbnail for a given MMSID
+  function fetchThumbnail(data) {
+    const apiUrl = `https://id.bibframe.app/app/thumbnail/${data.id}`;
+    fetch(apiUrl)
+      .then(response => {
+        console.log('Thumbnail API response received:', response);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(thumbnailData => {
+        console.log('Fetched thumbnail data:', thumbnailData);
+        if (thumbnailData && thumbnailData.thumbnail) {
+          data.thumbnail = thumbnailData.thumbnail;
+          insertThumbnail(data);
+        } else {
+          console.log('No valid thumbnail data to insert for MMSID:', data.id);
+        }
+      })
+      .catch(error => console.error('Thumbnail Fetch Error:', error));
+  }
+
+  // Function to insert the thumbnail into the DOM
+  function insertThumbnail(data) {
+    console.log('Inserting thumbnail for data:', data);
+
+    const articleElement = document.querySelector(`article[data-document-id="${data.id}"]`);
+    if (!articleElement) {
+      console.error('Article element not found for MMSID:', data.id);
+      return;
+    }
+
+    // Check if thumbnail already inserted
+    if (articleElement.querySelector('.document-thumbnail')) {
+      console.log('Thumbnail already inserted for MMSID:', data.id);
+      return;
+    }
+
+    if (data && data.thumbnail) {
+      const img = document.createElement('img');
+      img.src = data.thumbnail;
+      img.alt = '';
+      img.width = 150;
+      img.height = 150;
+      img.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${data.qid}`);
+      img.onerror = function() {
+        console.error('Failed to load thumbnail image:', img.src);
+        img.remove(); // Remove the image element if it fails to load
+      };
+
+      // Create the border div
+      const borderDiv = document.createElement('div');
+      borderDiv.className = 'border border-primary p-2';
+      borderDiv.appendChild(img);
+
+      // Create the thumbnail div
+      const thumbnailDiv = document.createElement('div');
+      thumbnailDiv.className = 'document-thumbnail';
+      thumbnailDiv.appendChild(borderDiv);
+
+      // Select the document-main-section within the article
+      const mainSection = articleElement.querySelector('.document-main-section');
+      if (mainSection) {
+        mainSection.insertAdjacentElement('afterend', thumbnailDiv);
+        console.log('Thumbnail inserted for MMSID:', data.id);
+      } else {
+        console.error('document-main-section not found for MMSID:', data.id);
+      }
+    } else {
+      console.log('No valid thumbnail data to insert for MMSID:', data.id);
+    }
+  }
+
+  // Function to insert the button into the DOM
+  function insertButton(data) {
+    if (data && data.qid && data.qid !== 'null') {
+      // Check if the button already exists
+      const existingButton = document.querySelector(
+        `button[data-preview-url="https://id.bibframe.app/entity/${data.qid}"]`
+      );
+      if (existingButton) {
+        console.log('Button already exists');
+        return;
+      }
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-secondary mt-3 mb-3';
+      button.setAttribute('data-bs-toggle', 'modal');
+      button.setAttribute('data-bs-target', '#knowledgeCardModal');
+      button.title = `Author/Creator Knowledge Card: works, biographical information, and more`;
+      button.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${data.qid}`);
+      button.textContent = `Author/Creator Knowledge Card`;
+
+      const targetElement = document.querySelector('dt.blacklight-creator_show');
+      if (targetElement) {
+        targetElement.insertAdjacentElement('afterend', button);
+        console.log('Button inserted');
+      } else {
+        console.error('Target element not found');
+      }
+
+      // Add event listener to the button to set the iframe URL
+      button.addEventListener('click', () => {
+        const iframe = document.getElementById('knowledgeCardIframe');
+        const url = button.getAttribute('data-preview-url');
+        console.log('Button clicked, loading URL:', url);
+        iframe.setAttribute('src', url + '?t=' + new Date().getTime());
+      });
+    } else {
+      console.log('qid is null or undefined, not displaying the button');
+    }
   }
 
   // Function to inject the modal HTML
@@ -171,7 +150,6 @@
       return;
     }
     const modalHTML = `
-      <!-- Modal -->
       <div class="modal fade" id="knowledgeCardModal" tabindex="-1" role="dialog" aria-labelledby="knowledgeCardModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg" role="document" style="max-width: 90%; height: 90%;">
           <div class="modal-content" style="height: 100%;">
@@ -198,23 +176,58 @@
 
   // Function to initialize modal events
   function initializeModalEvents() {
-    const modal = $('#knowledgeCardModal');
+    const modal = document.getElementById('knowledgeCardModal');
+    const iframe = document.getElementById('knowledgeCardIframe');
 
-    // When the modal is shown
-    modal.on('show.bs.modal', function (event) {
-      const button = $(event.relatedTarget); // Button that triggered the modal
-      const url = button.data('preview-url');
-      const iframe = document.getElementById('knowledgeCardIframe');
-      console.log('Modal shown, loading URL:', url);
-      iframe.src = url + '?t=' + new Date().getTime();
+    if (modal && iframe) {
+      console.log('Modal and iframe elements found');
+
+      modal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        if (!button) {
+          console.error('Button that triggered the modal not found');
+          return;
+        }
+        console.log('Button that triggered the modal:', button);
+        const url = button.getAttribute('data-preview-url');
+        console.log('Modal shown, loading URL:', url);
+        iframe.setAttribute('src', '');
+        iframe.setAttribute('src', url + '?t=' + new Date().getTime());
+      });
+
+      modal.addEventListener('hidden.bs.modal', function () {
+        console.log('Modal hidden, clearing iframe src');
+        iframe.setAttribute('src', '');
+      });
+    } else {
+      console.error('Modal or iframe element not found');
+    }
+  }
+
+  // Function to initialize the app
+  function initializeApp() {
+    console.log('Initializing app for search results page...');
+
+    // Inject the modal HTML if not already injected
+    injectModalHTML();
+
+    // Initialize the modal events
+    initializeModalEvents();
+
+    // Wait for the documents list to be present
+    const observer = new MutationObserver(() => {
+      const documentsList = document.getElementById('documents');
+      if (documentsList) {
+        observer.disconnect();
+        console.log('Documents list found, extracting MMSIDs and fetching data...');
+        const mmsids = extractMmsidsFromDocument();
+        mmsids.forEach(mmsid => {
+          fetchData(mmsid);
+        });
+      }
     });
 
-    // When the modal is closed
-    modal.on('hidden.bs.modal', function () {
-      const iframe = document.getElementById('knowledgeCardIframe');
-      console.log('Modal hidden, clearing iframe src');
-      iframe.src = '';
-    });
+    observer.observe(document.body, { childList: true, subtree: true });
   }
 
   // Initialize the app when the content script runs
@@ -230,6 +243,4 @@
       initializeApp();
     }
   }).observe(document.body, { childList: true, subtree: true });
-
-  // Remove monkey-patching of history methods and unnecessary event listeners
 })();
