@@ -84,9 +84,7 @@ function extractMmsidFromUrl() {
               <div class="modal-content" style="height: 100%;">
                 <div class="modal-header">
                   <h5 class="modal-title" id="exampleModalLabel">Author/Creator Knowledge Card</h5>
-                  <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                  </button>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" style="flex: 1; overflow: auto;">
                   <div class="embed-responsive embed-responsive-16by9" style="height: 100%;">
