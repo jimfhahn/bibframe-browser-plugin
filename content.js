@@ -172,12 +172,14 @@
       return;
     }
     const modalHTML = `
-      <div class="modal fade" id="knowledgeCardModal" tabindex="-1" aria-labelledby="knowledgeCardModalLabel" aria-hidden="true">
+      <div class="modal fade" id="knowledgeCardModal" tabindex="-1" role="dialog" aria-labelledby="knowledgeCardModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg" role="document" style="max-width: 90%; height: 90%;">
           <div class="modal-content" style="height: 100%;">
             <div class="modal-header">
               <h5 class="modal-title" id="knowledgeCardModalLabel">Author/Creator Knowledge Card</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
             </div>
             <div class="modal-body" style="flex: 1; overflow: auto;">
               <iframe id="knowledgeCardIframe" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>

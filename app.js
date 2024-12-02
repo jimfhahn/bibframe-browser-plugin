@@ -47,8 +47,8 @@ function extractMmsidFromUrl() {
           const button = document.createElement('button');
           button.type = 'button';
           button.className = 'btn btn-secondary mt-3 mb-3';
-          button.setAttribute('data-bs-toggle', 'modal');
-          button.setAttribute('data-bs-target', '#knowledgeCardModal');
+          button.setAttribute('data-toggle', 'modal');
+          button.setAttribute('data-target', '#knowledgeCardModal');
           button.title = `Author/Creator Knowledge Card: works, biographical information, and more`;
           button.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${this.apiData.qid}`);
           button.textContent = `Author/Creator Knowledge Card`;
@@ -79,12 +79,14 @@ function extractMmsidFromUrl() {
         }
         const modalHTML = `
           <!-- Modal -->
-          <div class="modal fade" id="knowledgeCardModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered" style="max-width: 90%; height: 90%;">
+          <div class="modal fade" id="knowledgeCardModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 90%; height: 90%;">
               <div class="modal-content" style="height: 100%;">
                 <div class="modal-header">
                   <h5 class="modal-title" id="exampleModalLabel">Author/Creator Knowledge Card</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
                 </div>
                 <div class="modal-body" style="flex: 1; overflow: auto;">
                   <div class="embed-responsive embed-responsive-16by9" style="height: 100%;">
@@ -108,31 +110,6 @@ function extractMmsidFromUrl() {
         if (modal && iframe) {
           console.log('Modal and iframe elements found');
 
-          // Remove custom event listeners to let Bootstrap handle them naturally
-          /*
-          modal.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            if (!button) {
-              console.error('Button that triggered the modal not found');
-              return;
-            }
-            console.log('Button that triggered the modal:', button);
-            const url = button.getAttribute('data-preview-url');
-            console.log('Modal shown, loading URL:', url);
-            iframe.setAttribute('src', '');
-            iframe.setAttribute('src', url + '?t=' + new Date().getTime());
-          });
-
-          modal.addEventListener('hidden.bs.modal', function () {
-            console.log('Modal hidden, clearing iframe src');
-            iframe.setAttribute('src', '');
-          });
-
-          // Remove custom jQuery handler for closing the modal
-          $(document).on('click', '[data-bs-dismiss="modal"]', function() {
-            $('#knowledgeCardModal').modal('hide');
-          });
-          */
         } else {
           console.error('Modal or iframe element not found');
         }
