@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "BIBFRAMinator",
   "version": "1.0",
-  "description": "BIBFRAMinates the web",
+  "description": "BIBFRAMinates the Penn Libraries' catalog",
   "permissions": [
     "webNavigation",
     "activeTab",
