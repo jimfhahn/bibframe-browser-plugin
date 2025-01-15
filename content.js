@@ -70,7 +70,7 @@
       return;
     }
 
-    if (data && data.thumbnail) {
+    if (data && data.thumbnail && data.qid !== 'null') {
       const img = document.createElement('img');
       img.src = data.thumbnail;
       img.alt = '';
