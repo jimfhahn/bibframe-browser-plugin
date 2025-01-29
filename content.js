@@ -10,7 +10,7 @@
 
   // Function to fetch data for a given MMSID
   function fetchData(mmsid) {
-    const apiUrl = `https://id.bibframe.app/app/mmsid/${mmsid}`;
+    const apiUrl = `https://id.bibframe.app/app/lcnaf/${mmsid}`;
     fetch(apiUrl)
       .then(response => {
         console.log('API response received:', response);
@@ -20,38 +20,19 @@
         return response.json();
       })
       .then(data => {
+        data.id = mmsid;
+        if (!data.qid && data.authorQid) {
+          data.qid = data.authorQid;
+        }
         console.log('Fetched data:', data);
         if (data) {
-          fetchThumbnail(data);
           if (window.location.href.includes('/catalog/')) {
             insertButton(data);
           }
+          insertThumbnail(data);
         }
       })
       .catch(error => console.error('Fetch Error:', error));
-  }
-
-  // Function to fetch the thumbnail for a given MMSID
-  function fetchThumbnail(data) {
-    const apiUrl = `https://id.bibframe.app/app/thumbnail/${data.id}`;
-    fetch(apiUrl)
-      .then(response => {
-        console.log('Thumbnail API response received:', response);
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
-      .then(thumbnailData => {
-        console.log('Fetched thumbnail data:', thumbnailData);
-        if (thumbnailData && thumbnailData.thumbnail) {
-          data.thumbnail = thumbnailData.thumbnail;
-          insertThumbnail(data);
-        } else {
-          console.log('No valid thumbnail data to insert for MMSID:', data.id);
-        }
-      })
-      .catch(error => console.error('Thumbnail Fetch Error:', error));
   }
 
   // Function to insert the thumbnail into the DOM

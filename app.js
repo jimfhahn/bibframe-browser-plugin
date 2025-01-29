@@ -17,7 +17,7 @@ function extractMmsidFromUrl() {
     },
     methods: {
       fetchData() {
-        const apiUrl = `https://id.bibframe.app/app/mmsid/${this.mmsid}`;
+        const apiUrl = `https://id.bibframe.app/app/lcnaf/${this.mmsid}`;
         console.log('Fetching data from API:', apiUrl);
         fetch(apiUrl)
           .then((response) => {
