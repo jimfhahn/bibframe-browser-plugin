@@ -1,31 +1,119 @@
 // background.js
-function fetchDataAndRewriteHTML(tabId, id) {
-  const apiUrl = `https://id.bibframe.app/app/mmsid/${id}`;
-  console.log('Fetching data from API:', apiUrl);
-  fetch(apiUrl)
-    .then(response => {
-      console.log('API response received:', response);
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      return response.json();
-    })
-    .then(data => {
-      console.log('Fetched data:', data);
-      browser.tabs.sendMessage(tabId, {
-        action: 'rewriteHTML',
-        data: data
-      });
-      console.log('Message sent to content script with data:', data);
-    })
-    .catch(error => console.error('Error fetching data:', error));
+
+// Remove the injectCSS function entirely
+/*
+function injectCSS(tabId) {
+  return browser.tabs.insertCSS(tabId, {
+    file: 'lib/bootstrap.min.css'
+  }).catch(error => {
+    console.error('Error injecting CSS:', error);
+  });
+}
+*/
+
+// Modify the injectScripts function to no longer inject CSS
+function injectScripts(tabId, scripts) {
+  if (scripts.length === 0) {
+    // Remove the injectCSS call
+    return Promise.resolve();
+  }
+  const script = scripts.shift();
+  return browser.tabs.executeScript(tabId, {
+    file: script,
+    runAt: 'document_idle'
+  }).then(() => {
+    return injectScripts(tabId, scripts);
+  }).catch(error => {
+    console.error('Error injecting script:', script, error);
+  });
 }
 
-// Listen for messages from the content script
-browser.runtime.onMessage.addListener((message, sender) => {
-  if (message.action === 'fetchData') {
-    const tabId = sender.tab.id;
-    console.log('Message received from content script:', message);
-    fetchDataAndRewriteHTML(tabId, message.id);
+browser.webNavigation.onHistoryStateUpdated.addListener(details => {
+  console.log('History state updated:', details.url);
+
+  const scripts = [
+    'lib/jquery.min.js',
+    'lib/popper.min.js',
+    'lib/bootstrap.min.js',
+    'lib/vue.min.js',
+    'content.js'
+  ];
+
+  injectScripts(details.tabId, scripts.slice());
+
+}, {
+  url: [
+    { hostEquals: 'find.library.upenn.edu' }
+  ]
+});
+
+// Listen for completed navigation to ensure content script is injected
+browser.webNavigation.onCompleted.addListener(details => {
+  console.log('Navigation completed:', details.url);
+
+  const scripts = [
+    'lib/jquery.min.js',
+    'lib/popper.min.js',
+    'lib/bootstrap.min.js',
+    'lib/vue.min.js',
+    'content.js'
+  ];
+
+  injectScripts(details.tabId, scripts.slice());
+
+}, {
+  url: [
+    { hostEquals: 'find.library.upenn.edu' }
+  ]
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url) {
+    if (tab.url.includes('/catalog/')) {
+      // Extract MMSID from URL
+      const match = tab.url.match(/catalog\/(\d+)/);
+      if (match) {
+        const mmsid = match[1];
+        console.log('Extracted MMSID:', mmsid);
+        const apiUrl = `https://id.bibframe.app/app/lcnaf/${mmsid}`;
+        console.log('Fetching LCNAF API:', apiUrl);
+        fetch(apiUrl)
+          .then(res => res.json())
+          .then(data => {
+            console.log('LCNAF API response data:', data);
+            // Trim response values to avoid extraneous spaces
+            const qid = (data.qid && data.qid.trim()) || (data.authorQid && data.authorQid.trim()) || '';
+            console.log('Fetched qid:', qid);
+            const panelUrl = 'sidebar-item.html?qid=' + encodeURIComponent(qid) + '&t=' + new Date().getTime();
+            chrome.sidebarAction.setPanel({ panel: panelUrl });
+          })
+          .catch(err => {
+            console.error('Error fetching LCNAF data:', err);
+            chrome.sidebarAction.setPanel({ panel: 'sidebar-item.html' });
+          });
+      } else {
+        console.error('No MMSID match found in URL.');
+        chrome.sidebarAction.setPanel({ panel: 'sidebar-item.html' });
+      }
+    } else if (
+      tab.url.includes('/search') ||
+      tab.url.includes('/documents') ||
+      tab.url.includes('?search_field') ||
+      tab.url.match(/[?&]q=/) ||
+      tab.url.includes('?page=')
+    ) {
+      // Extract the "q" parameter from the active tab URL
+      const urlObj = new URL(tab.url);
+      const qParam = urlObj.searchParams.get('q') || '';
+      // Append a timestamp to force panel reloading (avoid caching)
+      const panelUrl = 'sidebar-search.html?q=' + encodeURIComponent(qParam) + '&t=' + new Date().getTime();
+      chrome.sidebarAction.setPanel({ panel: panelUrl });
+    }
+  }
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url) {
+    chrome.runtime.sendMessage({ type: 'update-sidebar', url: tab.url });
   }
 });

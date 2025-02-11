@@ -1,182 +1,281 @@
-// content.js
-console.log('Content script loaded');
+(function() {
+  console.log('Content script loaded');
 
-function injectJQuery(callback) {
-  const script = document.createElement('script');
-  script.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
-  script.onload = callback;
-  document.head.appendChild(script);
-}
+  // Function to extract MMSIDs from the document HTML
+  function extractMmsidsFromDocument() {
+    const mmsidElements = document.querySelectorAll('[data-document-id]');
+    console.log('Extracting MMSIDs from document:', mmsidElements);
+    return Array.from(mmsidElements).map(el => el.getAttribute('data-document-id'));
+  }
 
-function injectBootstrap(callback) {
-  // Inject Bootstrap CSS
-  const bootstrapCSS = document.createElement('link');
-  bootstrapCSS.rel = 'stylesheet';
-  bootstrapCSS.href = 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css';
-  document.head.appendChild(bootstrapCSS);
+  // Function to fetch data for a given MMSID
+  function fetchData(mmsid) {
+    const apiUrl = `https://id.bibframe.app/app/lcnaf/${mmsid}`;
+    fetch(apiUrl)
+      .then(response => {
+        console.log('API response received:', response);
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        data.id = mmsid;
+        if (!data.qid && data.authorQid) {
+          data.qid = data.authorQid;
+        }
+        console.log('Fetched data:', data);
+        if (data) {
+          if (window.location.href.includes('/catalog/')) {
+            insertButton(data);
+          }
+          insertThumbnail(data);
+        }
+      })
+      .catch(error => console.error('Fetch Error:', error));
+  }
 
-  // Inject Popper.js (required by Bootstrap)
-  const popperJS = document.createElement('script');
-  popperJS.src = 'https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js';
-  popperJS.onload = () => {
-    // Inject Bootstrap JS after Popper.js is loaded
-    const bootstrapJS = document.createElement('script');
-    bootstrapJS.src = 'https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js';
-    bootstrapJS.onload = () => {
-      console.log('Bootstrap JS loaded');
-      callback();
-    };
-    document.body.appendChild(bootstrapJS);
-  };
-  document.body.appendChild(popperJS);
-}
+  // Function to insert the thumbnail into the DOM
+  function insertThumbnail(data) {
+    console.log('Inserting thumbnail for data:', data);
 
-function injectModalHTML() {
-  const modalHTML = `
-    <!-- Modal -->
-    <div class="modal fade" id="knowledgeCardModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered" style="max-width: 90%; height: 90%;">
-        <div class="modal-content" style="height: 100%;">
-          <div class="modal-header">
-            <h5 class="modal-title" id="exampleModalLabel">Author Knowledge Card</h5>
-            <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-          <div class="modal-body" style="flex: 1; overflow: auto;">
-            <div class="embed-responsive embed-responsive-16by9" style="height: 100%;">
-              <iframe class="embed-responsive-item" id="knowledgeCardIframe" allowfullscreen style="height: 100%;"></iframe>
+    const articleElement = document.querySelector(`article[data-document-id="${data.id}"]`);
+    if (!articleElement) {
+      console.error('Article element not found for MMSID:', data.id);
+      return;
+    }
+
+    // Check if thumbnail already inserted
+    if (articleElement.querySelector('.document-thumbnail')) {
+      console.log('Thumbnail already inserted for MMSID:', data.id);
+      return;
+    }
+
+    if (data && data.thumbnail && data.qid !== 'null') {
+      const img = document.createElement('img');
+      img.src = data.thumbnail;
+      img.alt = '';
+      img.width = 200;
+      img.height = 200;
+      img.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${data.qid}`);
+      img.onerror = function() {
+        console.error('Failed to load thumbnail image:', img.src);
+        img.remove(); // Remove the image element if it fails to load
+      };
+
+      // Create the anchor element
+      const anchor = document.createElement('a');
+      anchor.href = '#';
+      anchor.setAttribute('data-toggle', 'modal');
+      anchor.setAttribute('data-target', '#knowledgeCardModal');
+      anchor.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${data.qid}`);
+      anchor.appendChild(img);
+
+      // Add click event listener to the anchor
+      anchor.addEventListener('click', function(event) {
+        event.preventDefault();
+        const iframe = document.getElementById('knowledgeCardIframe');
+        const url = anchor.getAttribute('data-preview-url');
+        console.log('Thumbnail clicked, loading URL:', url);
+        iframe.setAttribute('src', url + '?t=' + new Date().getTime());
+      });
+
+      // Create the border div
+      const borderDiv = document.createElement('div');
+      borderDiv.className = 'border border-primary p-2';
+      borderDiv.appendChild(anchor);
+
+      // Create the thumbnail div
+      const thumbnailDiv = document.createElement('div');
+      thumbnailDiv.className = 'document-thumbnail';
+      thumbnailDiv.appendChild(borderDiv);
+
+      // Select the document-main-section within the article
+      const mainSection = articleElement.querySelector('.document-main-section');
+      if (mainSection) {
+        mainSection.insertAdjacentElement('afterend', thumbnailDiv);
+        console.log('Thumbnail inserted for MMSID:', data.id);
+      } else {
+        console.error('document-main-section not found for MMSID:', data.id);
+      }
+    } else {
+      console.log('No valid thumbnail data to insert for MMSID:', data.id);
+    }
+  }
+
+  // Function to insert the button into the DOM
+  function insertButton(data) {
+    if (data && data.qid && data.qid !== 'null') {
+      // Check if the button already exists
+      const existingButton = document.querySelector(
+        `button[data-preview-url="https://id.bibframe.app/entity/${data.qid}"]`
+      );
+      if (existingButton) {
+        console.log('Button already exists');
+        return;
+      }
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn btn-secondary mt-3 mb-3'; // Ensure Bootstrap button classes are used
+      button.style.width = 'auto'; // Ensure the button does not span full width
+      button.setAttribute('data-toggle', 'modal');
+      button.setAttribute('data-target', '#knowledgeCardModal');
+      button.title = `Author/Creator Knowledge Card: works, biographical information, and more`;
+      button.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${data.qid}`);
+      button.textContent = `Author/Creator Knowledge Card`;
+
+      const targetElement = document.querySelector('dt.blacklight-creator_show');
+      if (targetElement) {
+        targetElement.insertAdjacentElement('afterend', button);
+        console.log('Button inserted');
+      } else {
+        console.error('Target element not found');
+        return; // Exit if the target element is not found
+      }
+
+      // Add event listener to the button to set the iframe URL
+      button.addEventListener('click', () => {
+        const iframe = document.getElementById('knowledgeCardIframe');
+        const url = button.getAttribute('data-preview-url');
+        console.log('Button clicked, loading URL:', url);
+        iframe.setAttribute('src', url + '?t=' + new Date().getTime());
+      });
+    } else {
+      console.log('qid is null or undefined, not displaying the button');
+    }
+  }
+
+  // Function to inject the modal HTML
+  function injectModalHTML() {
+    if (document.getElementById('knowledgeCardModal')) {
+      console.log('Modal HTML already injected');
+      return;
+    }
+    const modalHTML = `
+      <div class="modal fade" id="knowledgeCardModal" tabindex="-1" role="dialog" aria-labelledby="knowledgeCardModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document" style="max-width: 90%; height: 90%;">
+          <div class="modal-content" style="height: 100%;">
+            <div class="modal-header">
+              <h5 class="modal-title" id="knowledgeCardModalLabel">Author/Creator Knowledge Card</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-body" style="flex: 1; overflow: auto;">
+              <iframe id="knowledgeCardIframe" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+            <div class="modal-footer">
+              <p>Powered by <a href="https://www.svde.org/" target="_blank">Share-VDE</a> and <a href="https://www.wikidata.org/" target="_blank">Wikidata</a></p>
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML('beforeend', modalHTML);
-  console.log('Modal HTML injected');
-}
-
-function initializeModalEvents() {
-  const modal = document.getElementById('knowledgeCardModal');
-  const iframe = document.getElementById('knowledgeCardIframe');
-
-  if (modal && iframe) {
-    console.log('Modal and iframe elements found');
-
-    modal.addEventListener('show.bs.modal', function (event) {
-      const button = event.relatedTarget; // Button that triggered the modal
-      if (!button) {
-        console.error('Button that triggered the modal not found');
-        return;
-      }
-      console.log('Button that triggered the modal:', button); // Log the button
-      const url = button.getAttribute('data-preview-url'); // Extract from data-* attributes
-      console.log('Modal shown, loading URL:', url); // Log the URL
-      iframe.setAttribute('src', ''); // Clear iframe
-      iframe.setAttribute('src', url + '?t=' + new Date().getTime()); // Update the iframe src with timestamp
-    });
-
-    modal.addEventListener('hidden.bs.modal', function () {
-      console.log('Modal hidden, clearing iframe src');
-      iframe.setAttribute('src', ''); // Clear the iframe src
-    });
-  } else {
-    console.error('Modal or iframe element not found');
-  }
-}
-
-function rewriteHTML(apiData) {
-  console.log('rewriteHTML function called with data:', apiData);
-
-  // Check if qid is null or the string "null"
-  if (!apiData.qid || apiData.qid === "null") {
-    console.error('qid is null or "null", not creating button');
-    return;
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    console.log('Modal HTML injected');
   }
 
-  // Check if the button already exists
-  if (document.querySelector('button[data-preview-url="https://id.bibframe.app/entity/' + apiData.qid + '"]')) {
-    console.log('Button already exists');
-    return;
-  }
-
-  // Create the new button element
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'btn btn-secondary mt-3 mb-3';
-  button.setAttribute('data-bs-toggle', 'modal');
-  button.setAttribute('data-bs-target', '#knowledgeCardModal');
-  button.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${apiData.qid}`);
-  button.textContent = 'View Author Knowledge Card';
-
-  // Add event listener to the button to set the iframe URL
-  button.addEventListener('click', function() {
+  // Function to initialize modal events
+  function initializeModalEvents() {
+    const modal = $('#knowledgeCardModal');
     const iframe = document.getElementById('knowledgeCardIframe');
-    const url = button.getAttribute('data-preview-url');
-    console.log('Button clicked, loading URL:', url);
-    iframe.setAttribute('src', url + '?t=' + new Date().getTime());
-  });
 
-  // Find the target <a> element and insert the new button after it
-  const targetLink = document.querySelector('a.btn.btn-success[data-controller="request-button"]');
-  if (targetLink) {
-    targetLink.insertAdjacentElement('afterend', button);
-    console.log('Button inserted');
-  } else {
-    console.error('Target link not found');
+    if (modal && iframe) {
+      console.log('Modal and iframe elements found');
+
+      modal.on('show.bs.modal', function(event) {
+        const button = $(event.relatedTarget); // Button that triggered the modal
+        const url = button.data('preview-url');
+        console.log('Modal shown, loading URL:', url);
+        iframe.src = url + '?t=' + new Date().getTime();
+      });
+
+      modal.on('hidden.bs.modal', function() {
+        console.log('Modal hidden, clearing iframe src');
+        iframe.src = '';
+      });
+
+      // Ensure the modal can be closed using jQuery
+      $(document).on('click', '[data-dismiss="modal"]', function() {
+        $('#knowledgeCardModal').modal('hide');
+      });
+    } else {
+      console.error('Modal or iframe element not found');
+    }
   }
-}
 
-// Function to observe DOM changes
-function observeDOMChanges() {
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      if (mutation.addedNodes.length) {
-        // Check if the document element with the mmsid is added
-        const documentElement = document.querySelector('div#document[data-document-id]');
-        if (documentElement) {
-          console.log('Document element added to the DOM');
-          const mmsid = documentElement.getAttribute('data-document-id');
-          console.log('Extracted mmsid:', mmsid);
+  // Function to initialize the app for the catalog detail page
+  function initializeCatalogPage() {
+    console.log('Initializing app for catalog detail page...');
 
-          // Send a message to the background script with the extracted mmsid
-          browser.runtime.sendMessage({ action: 'fetchData', id: mmsid });
-          console.log('Message sent to background script with mmsid:', mmsid);
+    // Extract the MMSID from the URL
+    const mmsid = extractMmsidFromUrl();
+    if (mmsid) {
+      console.log('Extracted mmsid from URL:', mmsid);
+      fetchData(mmsid);
+    } else {
+      console.log('Failed to extract mmsid from URL');
+    }
+  }
 
-          observer.disconnect(); // Stop observing after the element is found
-        }
+  // Function to extract the MMSID from the URL
+  function extractMmsidFromUrl() {
+    const url = window.location.href;
+    const match = url.match(/catalog\/(\d+)/);
+    return match ? match[1] : null;
+  }
+
+  // Function to initialize the app for the search results page
+  function initializeSearchResultsPage() {
+    console.log('Initializing app for search results page...');
+
+    // Wait for the documents list to be present
+    const observer = new MutationObserver(() => {
+      const documentsList = document.getElementById('documents');
+      if (documentsList) {
+        observer.disconnect();
+        console.log('Documents list found, extracting MMSIDs and fetching data...');
+        const mmsids = extractMmsidsFromDocument();
+        mmsids.forEach(mmsid => {
+          fetchData(mmsid);
+        });
       }
     });
-  });
 
-  // Start observing the document for changes
-  observer.observe(document.body, { childList: true, subtree: true });
-}
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
 
-// Function to listen for messages from the background script
-function listenForMessages() {
-  browser.runtime.onMessage.addListener((message) => {
-    if (message.action === 'rewriteHTML') {
-      console.log('Message received from background script:', message);
-      rewriteHTML(message.data);
+  // Function to initialize the app
+  function initializeApp() {
+    console.log('Initializing app...');
+
+    // Inject the modal HTML if not already injected
+    injectModalHTML();
+
+    // Initialize the modal events
+    initializeModalEvents();
+
+    // Determine the page type and initialize accordingly
+    if (window.location.href.includes('/catalog/')) {
+      initializeCatalogPage();
+    } else if (document.getElementById('documents')) {
+      initializeSearchResultsPage();
     }
-  });
-}
+  }
 
-// Main function to initialize the content script
-function initializeContentScript() {
-  injectModalHTML();
-  injectJQuery(() => {
-    injectBootstrap(() => {
-      initializeModalEvents();
-    });
-  });
-  observeDOMChanges();
-  listenForMessages();
-}
+  // Initialize the app when the content script runs
+  initializeApp();
 
-// Initialize the content script
-initializeContentScript();
+  // Detect URL changes and re-initialize the app
+  let lastUrl = window.location.href;
+  new MutationObserver(() => {
+    const url = window.location.href;
+    if (url !== lastUrl) {
+      console.log('URL changed from', lastUrl, 'to', url);
+      lastUrl = url;
+      initializeApp();
+    }
+  }).observe(document.body, { childList: true, subtree: true });
+})();
