@@ -25,7 +25,13 @@
             </iframe>
           `;
         } else {
-          contentDiv.innerHTML = '<h1>Default Sidebar</h1><!-- default content -->';
+          // Replace default sidebar text with placeholder text
+          contentDiv.innerHTML = `
+            <h1>Search Sidebar</h1>
+            <p>This sidebar will display search data once you perform a search from the 
+            <a href="https://find.library.upenn.edu/" target="_blank">library catalog</a>. 
+            Please go to the catalog, enter your search terms, and then return here for the results.</p>
+          `;
         }
       } else {
         console.error("No active tab URL available");

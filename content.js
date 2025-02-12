@@ -106,24 +106,21 @@
   // Function to insert the button into the DOM
   function insertButton(data) {
     if (data && data.qid && data.qid !== 'null') {
-      // Check if the button already exists
-      const existingButton = document.querySelector(
-        `button[data-preview-url="https://id.bibframe.app/entity/${data.qid}"]`
-      );
-      if (existingButton) {
-        console.log('Button already exists');
+      // Check if the button already exists using a unique id
+      if (document.getElementById('knowledge-card-button')) {
+        console.log('Knowledge card button already inserted');
         return;
       }
-
       const button = document.createElement('button');
+      button.id = 'knowledge-card-button';
       button.type = 'button';
-      button.className = 'btn btn-secondary mt-3 mb-3'; // Ensure Bootstrap button classes are used
-      button.style.width = 'auto'; // Ensure the button does not span full width
+      button.className = 'btn btn-secondary mt-3 mb-3';
+      button.style.width = 'auto';
       button.setAttribute('data-toggle', 'modal');
       button.setAttribute('data-target', '#knowledgeCardModal');
-      button.title = `Author/Creator Knowledge Card: works, biographical information, and more`;
+      button.title = 'Author/Creator Knowledge Card: works, biographical information, and more';
       button.setAttribute('data-preview-url', `https://id.bibframe.app/entity/${data.qid}`);
-      button.textContent = `Author/Creator Knowledge Card`;
+      button.textContent = 'Author/Creator Knowledge Card';
 
       const targetElement = document.querySelector('dt.blacklight-creator_show');
       if (targetElement) {
@@ -246,6 +243,38 @@
 
     observer.observe(document.body, { childList: true, subtree: true });
   }
+
+  // New function to refresh thumbnails in search results when the page becomes visible
+  function refreshThumbnails() {
+    const articles = document.querySelectorAll('article[data-document-id]');
+    articles.forEach(article => {
+      if (!article.querySelector('.document-thumbnail')) {
+        const mmsid = article.getAttribute('data-document-id');
+        console.log('Refreshing thumbnail for MMSID:', mmsid);
+        fetchData(mmsid);
+      }
+    });
+  }
+
+  // Listen for page visibility change to trigger thumbnail refresh
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+      console.log('Page is visible; refreshing thumbnails...');
+      refreshThumbnails();
+    }
+  });
+
+  // Modify the pageshow event to always refresh thumbnails after a delay
+  window.addEventListener('pageshow', function(event) {
+    console.log('pageshow event fired; refreshing thumbnails after delay...');
+    setTimeout(refreshThumbnails, 500);
+  });
+
+  // Add a popstate listener to refresh thumbnails after navigating back/forward
+  window.addEventListener('popstate', function(event) {
+    console.log('popstate event fired; refreshing thumbnails after delay...');
+    setTimeout(refreshThumbnails, 500);
+  });
 
   // Function to initialize the app
   function initializeApp() {

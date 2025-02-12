@@ -84,16 +84,21 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
             // Trim response values to avoid extraneous spaces
             const qid = (data.qid && data.qid.trim()) || (data.authorQid && data.authorQid.trim()) || '';
             console.log('Fetched qid:', qid);
-            const panelUrl = 'sidebar-item.html?qid=' + encodeURIComponent(qid) + '&t=' + new Date().getTime();
-            chrome.sidebarAction.setPanel({ panel: panelUrl });
+            if (qid) {
+              // Only update the sidebar for the item page if a valid qid is returned
+              const panelUrl = 'sidebar-item.html?qid=' + encodeURIComponent(qid) + '&t=' + new Date().getTime();
+              chrome.sidebarAction.setPanel({ panel: panelUrl });
+            } else {
+              console.log('No valid qid returned; keeping the previous sidebar.');
+            }
           })
           .catch(err => {
             console.error('Error fetching LCNAF data:', err);
-            chrome.sidebarAction.setPanel({ panel: 'sidebar-item.html' });
+            console.log('Keeping the previous sidebar due to fetch error.');
           });
       } else {
         console.error('No MMSID match found in URL.');
-        chrome.sidebarAction.setPanel({ panel: 'sidebar-item.html' });
+        // Do nothing to retain previous sidebar
       }
     } else if (
       tab.url.includes('/search') ||
