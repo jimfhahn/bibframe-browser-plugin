@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "BIBFRAMinator",
-  "version": "3.0",
+  "version": "3.14",
   "description": "BIBFRAMinates the Penn Libraries' catalog",
   "permissions": [
     "webNavigation",
@@ -20,7 +20,7 @@
     }
   },
   "sidebar_action": {
-    "default_title": "BIBFRAMinator Sidebar",
+    "default_title": "BIBFRAMinator",
     "default_panel": "sidebar.html",
     "default_icon": "icons/sidebar_icon.png"
   },
