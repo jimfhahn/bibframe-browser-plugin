@@ -12,7 +12,7 @@
 
 - **Thumbnail Display**: Load and display thumbnail images for catalog items.
 - **Modal Injection**: Inject and initialize modal HTML for detailed views.
-- **Data Fetching**: Fetch data from APIs based on MMSIDs extracted from URLs.
+- **Data Fetching**: Fetch data from APIs based on IDs extracted from URLs.
 - **Search Handling**: Update sidebars with search results and related author information.
 
 ## Dependencies
