@@ -24,3 +24,8 @@ Demonstration SQID with Share-VDE data at https://id.bibframe.app/entity/Q1339
 
 ### Middleware 
 Middleware adapts GraphQL queries from Share-VDE for SQID display. Code for middleware is in active development, not open sourced (yet).
+
+
+## Acknowledgements
+
+This project was developed with the help of [GitHub Copilot](https://github.com/features/copilot), an AI pair programmer that assisted with code suggestions.
